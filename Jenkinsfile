@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        KUBECONFIG_PATH = 'C:/Users/IT-WORKSTATION/Desktop/flask-app'  // Change this to your actual kubeconfig path
+        KUBECONFIG_PATH = 'C:/Users/IT-WORKSTATION/Desktop/flask-app/minikube-kubeconfig.yaml'  // Change this to your actual kubeconfig path
         IMAGE_TAG = "${env.BUILD_NUMBER}"  // Use Jenkins build number as tag for uniqueness
         DEPLOYMENT_NAME = 'flask-app-deployment'
         CONTAINER_NAME = 'flask-app'
