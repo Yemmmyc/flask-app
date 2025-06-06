@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         KUBECONFIG_PATH = 'C:/Users/IT-WORKSTATION/Desktop/flask-app'  // Change this to your actual kubeconfig path
-        IMAGE_TAG = "4"
+        IMAGE_TAG = "${env.BUILD_NUMBER}"  // Use Jenkins build number as tag for uniqueness
         DEPLOYMENT_NAME = 'flask-app-deployment'
         CONTAINER_NAME = 'flask-app'
         DOCKER_IMAGE = 'yemisi76/flask-app'
@@ -19,10 +19,13 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                bat """
-                docker build -t %DOCKER_IMAGE%:%IMAGE_TAG% .
-                docker push %DOCKER_IMAGE%:%IMAGE_TAG%
-                """
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    bat """
+                    docker build -t %DOCKER_IMAGE%:%IMAGE_TAG% .
+                    docker login -u %DOCKER_USER% -p %DOCKER_PASS%
+                    docker push %DOCKER_IMAGE%:%IMAGE_TAG%
+                    """
+                }
             }
         }
 
