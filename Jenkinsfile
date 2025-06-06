@@ -1,64 +1,47 @@
 pipeline {
-    agent any  // Run on any available Jenkins agent
+    agent any
 
     environment {
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-creds')  
-        KUBECONFIG_FILE = credentials('kubeconfig')
+        KUBECONFIG_PATH = 'C:/Users/IT-WORKSTATION/Desktop/flask-app'  // Change this to your actual kubeconfig path
+        IMAGE_TAG = "4"
+        DEPLOYMENT_NAME = 'flask-app-deployment'
+        CONTAINER_NAME = 'flask-app'
+        DOCKER_IMAGE = 'yemisi76/flask-app'
+        K8S_MANIFEST_DIR = 'k8s'
     }
 
     stages {
-        stage('Checkout Source') {
+        stage('Clone Code') {
             steps {
-                checkout scm
+                git branch: 'main', url: 'https://github.com/Yemmmyc/Electricaa.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    dockerImage = docker.build("yemisi76/flask-app:${env.BUILD_NUMBER}")
-                }
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-creds') {
-                        dockerImage.push()
-                    }
-                }
+                bat """
+                docker build -t %DOCKER_IMAGE%:%IMAGE_TAG% .
+                docker push %DOCKER_IMAGE%:%IMAGE_TAG%
+                """
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    script {
-                        if (isUnix()) {
-                            sh """
-                            kubectl --kubeconfig=$KUBECONFIG set image deployment/flask-app-deployment flask-app=yemisi76/flask-app:${env.BUILD_NUMBER} --record
-                            """
-                        } else {
-                            bat """
-                            kubectl --kubeconfig=%KUBECONFIG% set image deployment/flask-app-deployment flask-app=yemisi76/flask-app:${env.BUILD_NUMBER} --record
-                            """
-                        }
-                    }
-                }
+                bat """
+                kubectl --kubeconfig=%KUBECONFIG_PATH% apply -f %K8S_MANIFEST_DIR%/
+                kubectl --kubeconfig=%KUBECONFIG_PATH% set image deployment/%DEPLOYMENT_NAME% %CONTAINER_NAME%=%DOCKER_IMAGE%:%IMAGE_TAG%
+                """
             }
         }
     }
 
     post {
-        always {
-            cleanWs()
+        failure {
+            echo 'Pipeline failed! Check logs for errors.'
         }
         success {
-            echo 'Pipeline completed successfully!'
-        }
-        failure {
-            echo 'Pipeline failed! Check logs.'
+            echo 'Deployment successful!'
         }
     }
 }
