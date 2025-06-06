@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        KUBECONFIG_PATH = 'C:/Users/IT-WORKSTATION/Desktop/flask-app/minikube-kubeconfig.yaml'  // Change this to your actual kubeconfig path
-        IMAGE_TAG = "${env.BUILD_NUMBER}"  // Use Jenkins build number as tag for uniqueness
+        KUBECONFIG_PATH = 'C:/Users/IT-WORKSTATION/Desktop/flask-app/minikube-kubeconfig.yaml'
+        IMAGE_TAG = "${env.BUILD_NUMBER}"
         DEPLOYMENT_NAME = 'flask-app-deployment'
         CONTAINER_NAME = 'flask-app'
         DOCKER_IMAGE = 'yemisi76/flask-app'
@@ -13,13 +13,13 @@ pipeline {
     stages {
         stage('Clone Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/Yemmmyc/Electricaa.git'
+                git branch: 'main', url: 'https://github.com/Yemmmyc/flask-app.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     bat """
                     docker build -t %DOCKER_IMAGE%:%IMAGE_TAG% .
                     docker login -u %DOCKER_USER% -p %DOCKER_PASS%
