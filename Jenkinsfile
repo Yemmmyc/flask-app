@@ -4,10 +4,9 @@ pipeline {
     environment {
         KUBECONFIG_PATH = 'C:/Users/IT-WORKSTATION/Desktop/flask-app/minikube-kubeconfig.yaml'
         IMAGE_TAG = "${env.BUILD_NUMBER}"
-        DEPLOYMENT_NAME = 'flask-app-deployment'
+        DEPLOYMENT_NAME = 'flask-app'
         CONTAINER_NAME = 'flask-app'
         DOCKER_IMAGE = 'yemisi76/flask-app'
-        K8S_MANIFEST_DIR = 'k8s'
     }
 
     stages {
@@ -17,22 +16,29 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     bat """
-                    docker build -t %DOCKER_IMAGE%:%IMAGE_TAG% .
-                    docker login -u %DOCKER_USER% -p %DOCKER_PASS%
-                    docker push %DOCKER_IMAGE%:%IMAGE_TAG%
+                    echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
                     """
                 }
+            }
+        }
+
+        stage('Build and Push Docker Image') {
+            steps {
+                bat """
+                docker build -t %DOCKER_IMAGE%:%IMAGE_TAG% .
+                docker push %DOCKER_IMAGE%:%IMAGE_TAG%
+                """
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
                 bat """
-                kubectl --kubeconfig=%KUBECONFIG_PATH% apply -f %K8S_MANIFEST_DIR%/
+                kubectl --kubeconfig=%KUBECONFIG_PATH% apply -f k8s/
                 kubectl --kubeconfig=%KUBECONFIG_PATH% set image deployment/%DEPLOYMENT_NAME% %CONTAINER_NAME%=%DOCKER_IMAGE%:%IMAGE_TAG%
                 """
             }
@@ -40,11 +46,11 @@ pipeline {
     }
 
     post {
-        failure {
-            echo 'Pipeline failed! Check logs for errors.'
-        }
         success {
-            echo 'Deployment successful!'
+            echo '✅ Deployment successful!'
+        }
+        failure {
+            echo '❌ Pipeline failed! Check logs for errors.'
         }
     }
 }
